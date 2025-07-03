@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Big Mac Index 前端</title>
+  <!-- [功能] 使用 CDN 方式引入 Vue3。2025-07-03_16:00 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    table, th, td { border: 1px solid #aaa; border-collapse: collapse; }
+    th, td { padding: 4px 8px; }
+    form { margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- [功能] 將表單與 table 包在 id=app 的 div 內，作為 Vue 掛載點。2025-07-03_16:00 -->
+  <form @submit.prevent="submitForm">
+    <input v-model="form.date" placeholder="日期 (YYYY-MM-DD)">
+    <input v-model="form.iso_a3" placeholder="國家代碼">
+    <input v-model="form.currency_code" placeholder="貨幣代碼">
+    <input v-model="form.name" placeholder="國家名稱">
+    <input v-model.number="form.local_price" placeholder="本地價格">
+    <input v-model.number="form.dollar_ex" placeholder="匯率">
+    <input v-model.number="form.dollar_price" placeholder="美元價格">
+    <button type="submit">新增</button>
+  </form>
+  <div v-if="msg">{{ msg }}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>日期</th><th>國家</th><th>貨幣</th><th>名稱</th><th>本地價格</th><th>匯率</th><th>美元價格</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="q in quotes" :key="q.id">
+        <td>{{ q.date }}</td>
+        <td>{{ q.iso_a3 }}</td>
+        <td>{{ q.currency_code }}</td>
+        <td>{{ q.name }}</td>
+        <td>{{ q.local_price }}</td>
+        <td>{{ q.dollar_ex }}</td>
+        <td>{{ q.dollar_price }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<script>
+// [功能] 建立 Vue3 app，管理 quotes、form、msg，並處理 API 互動。2025-07-03_16:00
+const { createApp } = Vue;
+createApp({
+  data() {
+    return {
+      quotes: [],
+      form: { date:'', iso_a3:'', currency_code:'', name:'', local_price:'', dollar_ex:'', dollar_price:'' },
+      msg: ''
+    };
+  },
+  methods: {
+    fetchQuotes() {
+      fetch('/api/bigmac')
+        .then(r => r.json())
+        .then(data => { this.quotes = data; });
+    },
+    submitForm() {
+      fetch('/api/bigmac', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.form)
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.id) {
+          this.msg = '新增成功';
+          this.form = { date:'', iso_a3:'', currency_code:'', name:'', local_price:'', dollar_ex:'', dollar_price:'' };
+          this.fetchQuotes();
+        } else {
+          this.msg = res.error || '新增失敗';
+        }
+      });
+    }
+  },
+  mounted() {
+    this.fetchQuotes();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
+

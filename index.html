@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>Big Mac Index 前端</title>
+  <!-- [功能] 使用 CDN 方式引入 Vue3。2025-07-03_16:00 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <style>
+    table, th, td { border: 1px solid #aaa; border-collapse: collapse; }
+    th, td { padding: 4px 8px; }
+    form { margin-bottom: 1em; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- [功能] 查詢模式：移除表單與 submit 相關元素，僅顯示資料表格。2025-07-03_16:20 -->
+  <!-- [功能] 新增國家名稱查詢欄位。2025-07-03_16:30 -->
+  <div style="margin-bottom:1em;">
+    <input v-model="searchName" placeholder="請輸入國家名稱查詢">
+    <button @click="searchQuotes" type="button">查詢</button>
+    <button @click="resetQuotes" type="button">全部顯示</button>
+  </div>
+  <div v-if="msg">{{ msg }}</div>
+  <table>
+    <thead>
+      <tr>
+        <th>日期</th><th>國家</th><th>貨幣</th><th>名稱</th><th>本地價格</th><th>匯率</th><th>美元價格</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="q in quotes" :key="q.id">
+        <td>{{ q.date }}</td>
+        <td>{{ q.iso_a3 }}</td>
+        <td>{{ q.currency_code }}</td>
+        <td>{{ q.name }}</td>
+        <td>{{ q.local_price }}</td>
+        <td>{{ q.dollar_ex }}</td>
+        <td>{{ q.dollar_price }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<script>
+// [功能] 建立 Vue3 app，管理 quotes、form、msg，並處理 API 互動。2025-07-03_16:00
+const { createApp } = Vue;
+createApp({
+  data() {
+    return {
+      quotes: [],
+      form: { date:'', iso_a3:'', currency_code:'', name:'', local_price:'', dollar_ex:'', dollar_price:'' },
+      msg: '',
+      searchName: ''
+    };
+  },
+  methods: {
+    fetchQuotes() {
+      fetch('/api/bigmac')
+        .then(r => r.json())
+        .then(data => { this.quotes = data; });
+    },
+    searchQuotes() {
+      if (!this.searchName.trim()) return this.fetchQuotes();
+      fetch('/api/bigmac')
+        .then(r => r.json())
+        .then(data => {
+          this.quotes = data.filter(q => q.name && q.name.includes(this.searchName.trim()));
+          this.msg = this.quotes.length ? '' : '查無資料';
+        });
+    },
+    resetQuotes() {
+      this.searchName = '';
+      this.msg = '';
+      this.fetchQuotes();
+    },
+    submitForm() {
+      fetch('/api/bigmac', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(this.form)
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.id) {
+          this.msg = '新增成功';
+          this.form = { date:'', iso_a3:'', currency_code:'', name:'', local_price:'', dollar_ex:'', dollar_price:'' };
+          this.fetchQuotes();
+        } else {
+          this.msg = res.error || '新增失敗';
+        }
+      });
+    }
+  },
+  mounted() {
+    this.fetchQuotes();
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
